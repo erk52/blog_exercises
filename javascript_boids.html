@@ -1,0 +1,164 @@
+<html>
+<head>
+<title> Da Boids!</title>
+</head>
+
+<body>
+<canvas id="space" width="1000" height="1000"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  var NBOIDS = 25;
+  var W = 1000;
+  var H = 1000;
+  var scatter = 0;
+  var currentMousePos = { x: -1, y: -1 };
+  $(document).mousemove(function(event) {
+    currentMousePos.x = event.pageX;
+    currentMousePos.y = event.pageY;
+  });
+  $(document).click(function(event) {
+    scatter = 60;
+    console.log('clicked');
+  });
+  
+  //DRAW FUNCTIONS
+  var canvas = document.getElementById('space')
+  var ctx = canvas.getContext('2d');
+  function drawBoid(bX, bY){
+    ctx.beginPath();
+    ctx.rect(bX-12.5,bY-12.5,25,25);
+    ctx.stroke();
+  }
+
+  function drawAllBoids(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (i=0;i<NBOIDS;i++){
+      drawBoid(ALLBOIDS[i][0], ALLBOIDS[i][1]);
+    }
+    ctx.beginPath();
+    ctx.rect(place[0]-10, place[1]-10, 20, 20)
+    ctx.stroke();
+  }
+
+  //Initialize Boids
+  var ALLBOIDS = [];
+  for (i = 0; i < NBOIDS; i++){
+    var x = Math.random()*(W-600) + 300;;
+    var y = Math.random()*(H-600) + 300;;
+    var vx = Math.random()*0.2 + 0.1;;
+    var vy = Math.random()*0.2 + 0.1;;
+    ALLBOIDS.push([x,y,vx,vy]);
+  }
+
+  function dist(b1, b2){
+    xd = ALLBOIDS[b1][0] - ALLBOIDS[b2][0];
+    yd = ALLBOIDS[b1][1] - ALLBOIDS[b2][1];
+    return Math.sqrt(xd*xd + yd*yd);
+  }
+
+  function rule1(b_ind){
+    //MOVE TOWARD CENTER OF MASS
+    var scale1 = 0.01
+    if (scatter > 0) { scale1 = - scale1;}
+    var sm_x = 0;
+    var sm_y = 0;
+    for (i=0;i<NBOIDS;i++){
+      if (i != b_ind){
+        sm_x += ALLBOIDS[i][0];
+        sm_y += ALLBOIDS[i][1];
+      }
+    }
+    sm_x = sm_x / (NBOIDS - 1);
+    sm_y = sm_y / (NBOIDS - 1);
+    var move = [scale1*(ALLBOIDS[b_ind][0] - sm_x),scale1*(ALLBOIDS[b_ind][1] - sm_y)]
+    return move
+  }
+
+  function rule2(b_ind){
+    //AVOID OTHER BOIDS
+    var scale2 = 0.2;
+    var spacing = 75;
+    var c = [0,0];
+    for (i=0;i<NBOIDS;i++){
+      if (i != b_ind) {
+        if (dist(b_ind, i) < spacing){
+          c[0] -= scale2*(ALLBOIDS[i][0] - ALLBOIDS[b_ind][0]);
+          c[1] -= scale2*(ALLBOIDS[i][1] - ALLBOIDS[b_ind][1]);
+        }
+      }
+    }
+    return c
+  }
+
+  function rule3(b_ind){
+    //BOIDS TEND TO AVERAGE VELOCITY
+    var scale3 = 0.05;
+    var pvj = [0,0]
+    for (i=0;i<NBOIDS;i++){
+      if (i != b_ind) {
+        pvj[0] += ALLBOIDS[i][2];
+        pvj[1] += ALLBOIDS[i][3];
+        }
+      }
+    pvj[0] = scale3*pvj[0] / (NBOIDS-1);
+    pvj[1] = scale3*pvj[1] / (NBOIDS-1);
+    return pvj;
+  }
+  
+  var place = [300,300]
+  function tend_to_place(b_int){
+    var scale4 = 0.2;
+    if (scatter > 0) { scale4 = - 0.05*scale4;}
+    //place[0] = (place[0] + 0.1) % W;
+    place[0] = currentMousePos.x;
+    place[1] = currentMousePos.y;
+    var delta = [scale4*(place[0] - ALLBOIDS[b_int][0]), scale4*(place[1] - ALLBOIDS[b_int][1])]
+    return delta;
+  }
+
+  function updateAllBoids(){
+    var v1 = [0,0];
+    var v2 = [0,0];
+    var v3 = [0,0];
+    var v4 = [0,0];
+    for (k=0;k<NBOIDS;k++){
+      v1 = rule1(k);
+
+      v2 = rule2(k);
+
+      v3 = rule3(k);
+      v4 = tend_to_place(k);
+      //Update Position and velocity
+      //Keep positions inside canvas
+      //Keep velocitiy magnitudes under 100
+      ALLBOIDS[k][2] += + v1[0] + v2[0] + v3[0] + v4[0];
+      if (ALLBOIDS[k][2] >100) { ALLBOIDS[k][2] = 100}
+      else if (ALLBOIDS[k][2] <-100) { ALLBOIDS[k][2] = -100}
+      ALLBOIDS[k][3] += v1[1] + v2[1] + v3[1] + v4[1];
+      if (ALLBOIDS[k][3] >100) { ALLBOIDS[k][3] = 100}
+      else if (ALLBOIDS[k][3] <-100) { ALLBOIDS[k][3] = -100}
+      ALLBOIDS[k][0] += 0.1*ALLBOIDS[k][2]
+      if (ALLBOIDS[k][0] < -100) { ALLBOIDS[k][0] += W ;}
+      else if (ALLBOIDS[k][0] > 100+W) { ALLBOIDS[k][0]  = ALLBOIDS[k][0] % W ;}
+      ALLBOIDS[k][1] +=  0.1*ALLBOIDS[k][3]
+      if (ALLBOIDS[k][1] < -100) { ALLBOIDS[k][1] += H ;}
+      else if (ALLBOIDS[k][1] > 100+ H) { ALLBOIDS[k][1]  = ALLBOIDS[k][1] % H ;}
+    }
+  }
+
+  function run_all(){
+    drawAllBoids();
+    updateAllBoids();
+    scatter--;
+    scatter = Math.max(0, scatter);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    raf = window.requestAnimationFrame(run_all);
+  }
+
+  run_all()
+ });
+</script>
+</body>
+</html>
