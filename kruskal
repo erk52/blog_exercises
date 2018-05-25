@@ -1,0 +1,51 @@
+Kruskal's algorithm is a way to find a minimal spanning tree in a graph.  That is, given a set of nodes and edges, it finds the smallest set of edges that will connect every node.  In a weighted graph, the 'smallest' set of edges means the set with the lowest total cost.  In an unweighted graph, it just means the set with the fewest edges. The algorithm works by starting with a set containing all the edges in the graph, and our spanning tree initialized with no edges.  We select the edge with the smallest cost, and check to see if it will form a cycle if we add it to our spanning tree. If no cycle is formed, we add it to the spanning tree. Otherwise, we discard it.  We keep going until our spanning tree has V-1 edges, since we know an MST with V verticies needs V-1 edges.
+
+So given a graph, we'll need to sort the edges by cost. That's simple enough, but the real meat of the problem is determining if a cycle is formed.  To do that, we'll need to talk about Union-Find algorithms and disjoint sets.
+
+A disjoint set keeps track of a set of elements which are divided into non-overlapping (disjoint) subsets.  'Find' refers to the problem of determining which subset an element is in, and 'Union' means to merge two subsets together. So what does this have to do with finding a cycle in a graph?
+
+When we check an edge that connects vertex u to vertex v, we use the Find function to see if these two vertices belong to the same subset. If they do, then this edge forms a cycle.  If not, we apply the Union function to connect their subsets.
+
+This sounds a little abstract, so let's try writing some code to make it more concrete.
+
+def kruskal(M):
+    edges = []
+    for i in range(len(M)-1):
+        for j in range(i+1, len(M)):
+            if M[i][j]:
+                edges.append([(i,j), M[i][j]])
+    edges.sort(key=lambda x: x[1])
+    
+    SUBSETS = [{i} for i in range(len(M))]
+    def union(a,b):
+        a_set, b_set = -1,-1
+        for i,s in enumerate(SUBSETS):
+            if a in s:
+                a_set = i
+            if b in s:
+                b_set = i
+        SUBSETS[a_set] = SUBSETS[a_set] | SUBSETS[b_set]
+        SUBSETS.remove(SUBSETS[b_set])
+    
+    def find(a,b):
+        a_set, b_set = -1,-1
+        for i,s in enumerate(SUBSETS):
+            if a in s:
+                a_set = i
+            if b in s:
+                b_set = i
+        return a_set == b_set
+    
+    MST_edges = []
+    
+    for e in edges:
+        vert, cost = e
+        u,v = vert
+        if find(u,v):
+            continue
+        else:
+            union(u,v)
+            MST_edges.append(e)
+            if len(MST_edges) == len(M) - 1:
+                break
+    return MST_edges
