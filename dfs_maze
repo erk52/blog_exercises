@@ -1,0 +1,54 @@
+The simplest thing I could think of to generate procedurally is a maze.  There are lots of different algorithms that can be used to generate mazes, so I think this will be a fruitful topic to investigate with a series of posts.  Once we're all experts on maze generation, we can expand to generating other sorts of maps, terrain, or structures.  So let's dive right in and work through a simple alogrithm based on a depth fist search.
+
+First, we consider the space for our maze as a grid of cells. For this first exercise, we'll assume it's rectangular, but there's no reason we can't do fun things like hexagonal grids in the future.  Start with a random cell, and choose a neighboring random cell that has not been visited yet.  Remove the wall between these two cells, mark them as visited, and add the new cell to the stack so we can backtrack to it when we hit a dead end.  When we reach a cell with no unvisited neighboring cells, we call that a dead end. We keep iterating until all cells in our grid have been visited.
+
+Let's try and implement this with some python.
+
+import random
+def maze_gen_dfs(L=20, W=20):
+    '''Uses randomized DFS to generate a maze on a rectangular LxW grid'''
+    #Initalzie the adjaceny list that will represent our graph
+    G = {(i,j): set() for i in range(L) for j in range(W)}
+    #pick a starting cell
+    start = random.randint(0,L-1), random.randint(0,W-1)
+    #All cells start off unvisited
+    unvisited = set(G.keys())
+    stack = []
+    
+    def isValid(N):
+        '''Checks is cell N is in bounds'''
+        if N[0] >=0 and N[1]>=0 and N[0] < L and N[1] < W:
+            return True
+    
+    cur = start
+    unvisited.remove(start)
+    while unvisited:
+        ci,cj = cur
+        neighbors = [(ci, cj+1), (ci, cj-1), (ci+1, cj), (ci-1, cj)]
+        unseen_neighbors = [n for n in neighbors if n in unvisited and isValid(n)]
+        if unseen_neighbors:
+            nex = random.choice(unseen_neighbors)
+            stack.append(cur)
+            unvisited.remove(nex)
+            G[cur].add(nex)
+            G[nex].add(cur)
+            cur = nex
+        else:
+            cur = stack.pop()
+    return G
+    
+    The function above stores the layout of our maze in the form of an adjacency list.  It returns a dictionary, where each square (i,j) has a set of other nodes it is connected to.  This is handy for doing things like pathfinding, but it's hard for a human to see what the maze actually looks like.  So I wrote a second function draw_walls to take this adjacency list and draw walls between neighboring cells that are not connected.  It's not the prettiest, but matplotlib makes it easy to generate a useful picture.
+    
+    def draw_walls(G):
+    
+    for x,y in G.keys():
+        if (x+1, y) not in G[(x,y)]:
+            plt.plot([x+.5, x+.5], [y-.5, y+.5], 'k-')
+        if (x-1, y) not in G[(x,y)]:
+            plt.plot([x-.5, x-.5], [y-.5, y+.5], 'k-')
+        if (x, y-1) not in G[(x,y)]:
+            plt.plot([x-.5, x+.5], [y-.5, y-.5], 'k-')
+        if (x, y+1) not in G[(x,y)]:
+            plt.plot([x-.5, x+.5], [y+.5, y+.5], 'k-')
+            
+You may notice that this maze has a lot of long, winding corridors.  This is typical of mazes generated with a random DFS.  The DFS algorithm will explore along one path for as long as possible before backtracking, so we get these long corridors. Next, we'll examine some other maze generation algorithms.
